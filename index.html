@@ -10,6 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A1A1A">
+    <link rel="apple-touch-icon" href="logo.jpeg">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -40,6 +43,13 @@
     <div id="auth-screen" class="hidden fixed inset-0 z-50 bg-charcoal flex flex-col items-center justify-center p-6">
         <img src="logo.jpeg" alt="RL Barbershop" class="w-32 h-32 rounded-full mb-8 border-2 border-gold shadow-lg shadow-gold/20">
         <h1 class="text-2xl font-bold text-gold mb-8">RL Barbershop</h1>
+        
+        <!-- Botão Instalar na Auth -->
+        <button class="pwa-install-btn hidden mb-6 p-2 text-gold bg-bronze/30 rounded-full border border-gold/30 hover:bg-gold hover:text-charcoal transition-all flex items-center gap-2 px-4">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span class="text-xs font-bold">Instalar Aplicativo</span>
+        </button>
+
         <form id="login-form" class="w-full max-w-sm space-y-4">
             <div>
                 <label class="block text-sm mb-1 text-pearl/70">E-mail</label>
@@ -70,9 +80,15 @@
                     <p class="text-[8px] text-pearl/40 mt-1">por <a href="https://lucianossantoswebdev.vercel.app/" target="_blank" class="hover:text-gold">Luciano S.S Dev</a></p>
                 </div>
             </div>
-            <button id="logout-btn" class="p-2 text-pearl/50 hover:text-gold">
-                <i data-lucide="log-out"></i>
-            </button>
+            <div class="flex items-center gap-2">
+                <button class="pwa-install-btn hidden p-2 text-gold bg-bronze/30 rounded-full border border-gold/30 hover:bg-gold hover:text-charcoal transition-all flex items-center gap-2 px-3">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold">Instalar App</span>
+                </button>
+                <button id="logout-btn" class="p-2 text-pearl/50 hover:text-gold">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
         </header>
 
         <!-- View Containers -->

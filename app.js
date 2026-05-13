@@ -534,3 +534,46 @@ function toggleFab() {
     }
     lucide.createIcons();
 }
+
+// --- Lógica PWA (Service Worker e Instalação) ---
+
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker registrado!', reg))
+            .catch(err => console.log('Erro ao registrar Service Worker:', err));
+    });
+}
+
+let deferredPrompt;
+const installBtns = document.querySelectorAll('.pwa-install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Impede que o mini-infobar apareça no mobile
+    e.preventDefault();
+    // Guarda o evento para ser acionado depois
+    deferredPrompt = e;
+    // Mostra os botões de instalação
+    installBtns.forEach(btn => btn.classList.remove('hidden'));
+});
+
+installBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        // Mostra o prompt de instalação
+        deferredPrompt.prompt();
+        // Aguarda a resposta do usuário
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`Usuário escolheu: ${outcome}`);
+        // Limpa o prompt
+        deferredPrompt = null;
+        // Esconde os botões
+        installBtns.forEach(b => b.classList.add('hidden'));
+    });
+});
+
+window.addEventListener('appinstalled', (evt) => {
+    console.log('Aplicativo instalado com sucesso!');
+    installBtns.forEach(b => b.classList.add('hidden'));
+});
