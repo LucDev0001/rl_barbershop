@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RL Barbershop - Gestão Financeira</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-active { color: #A68954; border-top: 2px solid #A68954; }
+        .glass { background: rgba(43, 43, 43, 0.8); backdrop-filter: blur(10px); }
+        input, select { background-color: #2B2B2B !important; color: #E5E2D9 !important; border: 1px solid #5C4026 !important; }
+        input:focus { border-color: #A68954 !important; outline: none; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'charcoal': '#1A1A1A',
+                        'anthracite': '#2B2B2B',
+                        'gold': '#A68954',
+                        'pearl': '#E5E2D9',
+                        'bronze': '#5C4026',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-charcoal text-pearl min-h-screen pb-20">
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="hidden fixed inset-0 z-50 bg-charcoal flex flex-col items-center justify-center p-6">
+        <img src="logo.jpeg" alt="RL Barbershop" class="w-32 h-32 rounded-full mb-8 border-2 border-gold shadow-lg shadow-gold/20">
+        <h1 class="text-2xl font-bold text-gold mb-8">RL Barbershop</h1>
+        <form id="login-form" class="w-full max-w-sm space-y-4">
+            <div>
+                <label class="block text-sm mb-1 text-pearl/70">E-mail</label>
+                <input type="email" id="email" required class="w-full p-3 rounded-lg">
+            </div>
+            <div>
+                <label class="block text-sm mb-1 text-pearl/70">Senha</label>
+                <input type="password" id="password" required class="w-full p-3 rounded-lg">
+            </div>
+            <button type="submit" class="w-full bg-gold text-charcoal font-bold py-3 rounded-lg active:scale-95 transition-transform">
+                Entrar
+            </button>
+        </form>
+        <div class="mt-12 text-center">
+            <p class="text-[10px] text-pearl/30 uppercase tracking-widest mb-1">Desenvolvido por</p>
+            <a href="https://lucianossantoswebdev.vercel.app/" target="_blank" class="text-gold font-medium text-sm hover:underline">Luciano S.S Dev</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="app" class="hidden">
+        <!-- Header -->
+        <header class="p-6 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="logo.jpeg" alt="Logo" class="w-10 h-10 rounded-full border border-gold">
+                <div>
+                    <h2 class="text-lg font-bold text-gold leading-none">RL Barbershop</h2>
+                    <p class="text-[8px] text-pearl/40 mt-1">por <a href="https://lucianossantoswebdev.vercel.app/" target="_blank" class="hover:text-gold">Luciano S.S Dev</a></p>
+                </div>
+            </div>
+            <button id="logout-btn" class="p-2 text-pearl/50 hover:text-gold">
+                <i data-lucide="log-out"></i>
+            </button>
+        </header>
+
+        <!-- View Containers -->
+        <div id="view-dashboard" class="view p-4 space-y-6">
+            <!-- Filter Dashboard -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <button onclick="setPeriod('all')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap active:bg-gold active:text-charcoal" data-period="all">Tudo</button>
+                <button onclick="setPeriod('today')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="today">Hoje</button>
+                <button onclick="setPeriod('week')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="week">Semana</button>
+                <button onclick="setPeriod('month')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="month">Mês</button>
+            </div>
+
+            <!-- Balance Card -->
+            <div class="bg-gradient-to-br from-anthracite to-charcoal p-6 rounded-2xl border border-bronze shadow-xl">
+                <p class="text-pearl/60 text-sm">Saldo no Período</p>
+                <h3 id="total-balance" class="text-3xl font-bold mt-1">R$ 0,00</h3>
+                <div class="flex gap-4 mt-4">
+                    <div class="flex-1">
+                        <p class="text-xs text-green-400">Ganhos</p>
+                        <p id="total-income" class="font-semibold">R$ 0,00</p>
+                    </div>
+                    <div class="flex-1 text-right">
+                        <p class="text-xs text-red-400">Despesas</p>
+                        <p id="total-expense" class="font-semibold">R$ 0,00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="bg-anthracite p-4 rounded-2xl border border-bronze">
+                <h4 class="text-sm font-semibold mb-4 text-gold">Desempenho no Período</h4>
+                <canvas id="mainChart" height="200"></canvas>
+            </div>
+
+            <!-- KPIs -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-anthracite p-4 rounded-xl border border-bronze">
+                    <p class="text-xs text-pearl/60">Ticket Médio</p>
+                    <p id="kpi-avg-ticket" class="text-lg font-bold text-gold">R$ 0,00</p>
+                </div>
+                <div class="bg-anthracite p-4 rounded-xl border border-bronze">
+                    <p class="text-xs text-pearl/60">Serviços</p>
+                    <p id="kpi-count" class="text-lg font-bold text-gold">0</p>
+                </div>
+            </div>
+
+            <!-- Quick Add FAB for Dashboard -->
+            <div class="fixed bottom-24 right-6 flex flex-col gap-3 items-end z-30">
+                <div id="fab-menu" class="hidden flex flex-col gap-3 mb-2 items-end">
+                    <button onclick="openTransactionModal('income'); toggleFab()" class="bg-green-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
+                        <span class="text-xs font-bold">Ganho</span>
+                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="openTransactionModal('expense'); toggleFab()" class="bg-red-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                        <span class="text-xs font-bold">Despesa</span>
+                        <i data-lucide="trending-down" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <button onclick="toggleFab()" class="bg-gold text-charcoal p-4 rounded-full shadow-2xl shadow-gold/40 active:scale-90 transition-transform">
+                    <i data-lucide="plus" id="fab-icon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="view-services" class="view hidden p-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gold">Serviços & Preços</h3>
+                <button onclick="openModal('service-modal')" class="bg-gold text-charcoal p-2 rounded-full active:scale-90">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+            <div id="services-list" class="space-y-3">
+                <!-- Services will be injected here -->
+            </div>
+        </div>
+
+        <div id="view-transactions" class="view hidden p-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gold">Extrato</h3>
+                <div class="flex gap-2">
+                    <button onclick="exportPDF()" class="bg-bronze text-gold p-2 rounded-full active:scale-90 border border-gold/30">
+                        <i data-lucide="file-text"></i>
+                    </button>
+                    <button onclick="openTransactionModal('income')" class="bg-green-600 text-white p-2 rounded-full active:scale-90">
+                        <i data-lucide="trending-up"></i>
+                    </button>
+                    <button onclick="openTransactionModal('expense')" class="bg-red-600 text-white p-2 rounded-full active:scale-90">
+                        <i data-lucide="trending-down"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                <button onclick="setPeriod('all')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="all">Todos</button>
+                <button onclick="setPeriod('today')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="today">Hoje</button>
+                <button onclick="setPeriod('week')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="week">Semana</button>
+                <button onclick="setPeriod('month')" class="period-btn bg-anthracite px-4 py-1.5 rounded-full text-xs border border-bronze whitespace-nowrap" data-period="month">Mês</button>
+            </div>
+
+            <div id="transactions-list" class="space-y-3">
+                <!-- Transactions will be injected here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 glass border-t border-bronze flex justify-around p-3 z-40">
+        <button onclick="switchView('dashboard')" class="nav-item flex flex-col items-center gap-1 transition-colors">
+            <i data-lucide="layout-dashboard"></i>
+            <span class="text-[10px]">Início</span>
+        </button>
+        <button onclick="switchView('transactions')" class="nav-item flex flex-col items-center gap-1 transition-colors">
+            <i data-lucide="list-ordered"></i>
+            <span class="text-[10px]">Extrato</span>
+        </button>
+        <button onclick="switchView('services')" class="nav-item flex flex-col items-center gap-1 transition-colors">
+            <i data-lucide="scissors"></i>
+            <span class="text-[10px]">Serviços</span>
+        </button>
+    </nav>
+
+    <!-- Modals -->
+    <!-- Service Modal -->
+    <div id="service-modal" class="modal hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+        <div class="bg-anthracite w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 border-t border-gold/30">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="service-modal-title" class="text-lg font-bold">Novo Serviço</h3>
+                <button onclick="closeModal('service-modal')" class="text-pearl/50"><i data-lucide="x"></i></button>
+            </div>
+            <form id="service-form" class="space-y-4">
+                <input type="hidden" id="service-id">
+                <div>
+                    <label class="block text-xs mb-1">Nome do Corte/Serviço</label>
+                    <input type="text" id="service-name" required placeholder="Ex: Corte Degradê" class="w-full p-3 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Valor (R$)</label>
+                    <input type="number" step="0.01" id="service-price" required placeholder="0,00" class="w-full p-3 rounded-xl">
+                </div>
+                <button type="submit" class="w-full bg-gold text-charcoal font-bold py-3 rounded-xl mt-4">Salvar</button>
+                <button type="button" id="delete-service-btn" class="hidden w-full bg-red-900/30 text-red-500 font-medium py-2 rounded-xl mt-2">Excluir</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div id="transaction-modal" class="modal hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4">
+        <div class="bg-anthracite w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 border-t border-gold/30">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="transaction-modal-title" class="text-lg font-bold">Novo Ganho</h3>
+                <button onclick="closeModal('transaction-modal')" class="text-pearl/50"><i data-lucide="x"></i></button>
+            </div>
+            <form id="transaction-form" class="space-y-4">
+                <input type="hidden" id="trans-id">
+                <input type="hidden" id="trans-type">
+                
+                <div id="service-select-group">
+                    <label class="block text-xs mb-1">Selecione o Serviço</label>
+                    <select id="trans-service" class="w-full p-3 rounded-xl appearance-none">
+                        <option value="">Outro / Manual</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs mb-1">Descrição</label>
+                    <input type="text" id="trans-desc" required placeholder="Ex: Aluguel, Pomada, Cliente X" class="w-full p-3 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Valor (R$)</label>
+                    <input type="number" step="0.01" id="trans-amount" required placeholder="0,00" class="w-full p-3 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs mb-1">Data</label>
+                    <input type="date" id="trans-date" required class="w-full p-3 rounded-xl">
+                </div>
+                
+                <button type="submit" class="w-full bg-gold text-charcoal font-bold py-3 rounded-xl mt-4">Confirmar</button>
+                <button type="button" id="delete-trans-btn" class="hidden w-full bg-red-900/30 text-red-500 font-medium py-2 rounded-xl mt-2">Excluir</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
